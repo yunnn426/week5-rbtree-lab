@@ -52,7 +52,7 @@ void rbtree_left_rotate(rbtree *t, node_t *x) {
 
   // y의 왼쪽 서브트리를 x의 오른쪽으로 옮김
   x->right = y->left;
-  if (y->left != NULL) {
+  if (y->left != t->nil) {
     y->left->parent = x;
   }
   
@@ -87,7 +87,7 @@ void rbtree_right_rotate(rbtree *t, node_t *y) {
 
   // x의 오른쪽 서브트리를 y의 왼쪽으로 옮김
   y->left = x->right;
-  if (x->right != NULL) {
+  if (x->right != t->nil) {
     x->right->parent = y;
   }
 
@@ -297,7 +297,7 @@ void rbtree_delete_fixup(rbtree *t, node_t *x) {
 
       // case 1: 형제가 red면 x 위로 red 올려주기 위해 회전
       if (w->color == RBTREE_RED) { 
-        printf("Casecase 1\n");
+        //printf("Casecase 1\n");
         w->color = RBTREE_BLACK;
         x->parent->color = RBTREE_RED;
         rbtree_left_rotate(t, x->parent);
@@ -306,7 +306,7 @@ void rbtree_delete_fixup(rbtree *t, node_t *x) {
 
       // case 2: 형제가 black이고 그 자식이 둘다 black이면 extra black을 부모로 올려줌
       if (w->left->color == RBTREE_BLACK && w->right->color == RBTREE_BLACK) {
-        printf("Casecase 2\n");
+        //printf("Casecase 2\n");
         w->color = RBTREE_RED;
         x = x->parent;
       }
@@ -314,7 +314,7 @@ void rbtree_delete_fixup(rbtree *t, node_t *x) {
       else {
         // case 3: 자식이 각각 red, black이고 red쪽 척추가 휘어진 경우 펴줌
         if (w->right->color == RBTREE_BLACK) {
-          printf("Casecase 3\n");
+          //printf("Casecase 3\n");
           w->left->color = RBTREE_BLACK;
           w->color = RBTREE_RED;
           rbtree_right_rotate(t, w);
@@ -322,19 +322,12 @@ void rbtree_delete_fixup(rbtree *t, node_t *x) {
         }
 
         // case 4: 깜깜부
-        printf("Casecase 4\n");
+        //printf("Casecase 4\n");
         w->color = x->parent->color;
-        printf("안뇽\n");
         x->parent->color = RBTREE_BLACK;
-        printf("안뇽\n");
-        if (w->right == NULL) {
-          printf("NULL인디\n");
-        }
         w->right->color = RBTREE_BLACK;
-        printf("안뇽\n");
         rbtree_left_rotate(t, x->parent);
         x = t->root;
-        printf("안뇽\n");
       }
     }
 
@@ -393,23 +386,23 @@ int rbtree_erase(rbtree *t, node_t *z) {
 
   // z의 왼쪽 자식이 없으면
   if (z->left == t->nil) {
-    printf("Case 1\n");
+    //printf("Case 1\n");
     x = z->right; // 오른쪽 자식이 z를 대체
     rbtree_transplant(t, z, z->right);
   }
   else if (z->right == t->nil) { // 오른쪽 자식이 없으면
-    printf("Case 2\n");
+    //printf("Case 2\n");
     x = z->left;
     rbtree_transplant(t, z, z->left);
   }
   else { // 양쪽 자식이 있으면 후임자 찾기
-    printf("Case 3\n");
+    //printf("Case 3\n");
     y = rbtree_find_successor(t, z->right);
     y_original_color = y->color;
     x = y->right;
 
     if (y->parent == z) { // 후임자가 z에 바로 연결되어 있으면
-      x->parent = y;
+      x->parent = y; // x가 nil이면 부모 연결해줘야 함, fixup에서 nil의 부모가 누구인지 알아야 하기 때문
     }
     else {
       //printf("척추 펴기\n");
@@ -428,14 +421,29 @@ int rbtree_erase(rbtree *t, node_t *z) {
   if (y_original_color == RBTREE_BLACK) {
     rbtree_delete_fixup(t, x);
   }
-  printf("%d 지웠음 \n", z->key);
+  //printf("%d 지웠음 \n", z->key);
   free(z);
 
   return 0;
 }
 
+int idx = 0;
+void rbtree_inverse_array(const rbtree *t, node_t *node, key_t *arr, const size_t n) {
+  if (node == t->nil) 
+    return;
+  rbtree_inverse_array(t, node->left, arr, n);
+  //printf("Writing %d at idx %d\n", node->key, idx);
+  *(arr + idx++) = node->key;
+  rbtree_inverse_array(t, node->right, arr, n);
+}
+
 int rbtree_to_array(const rbtree *t, key_t *arr, const size_t n) {
   // TODO: implement to_array
+  
+  // arr(n개 배열)에 t의 노드를 오름차순으로
+  idx = 0;
+  rbtree_inverse_array(t, t->root, arr, n);
+
   return 0;
 }
 
@@ -452,29 +460,29 @@ void rbtree_to_print(node_t *t, node_t *nil)
     rbtree_to_print(t->right, nil);
 }
 
-void printTree(rbtree *t, node_t *cur, int level, int isLeft) {
-    if (cur == t->nil) {
-        return;
-    }
+// void printTree(rbtree *t, node_t *cur, int level, int isLeft) {
+//     if (cur == t->nil) {
+//         return;
+//     }
 
-    // 오른쪽 자식 노드 출력
-    printTree(t, cur->right, level + 1, 0);
+//     // 오른쪽 자식 노드 출력
+//     printTree(t, cur->right, level + 1, 0);
 
-    // 현재 노드 출력
-    for (int i = 0; i < level - 1; i++) {
-        printf("    ");
-    }
-    if (level > 0) {
-        printf(isLeft ? " \\_ " : " /⎺ ");  // 왼쪽 자식일 경우 "\\" 출력, 오른쪽 자식일 경우 "/" 출력
-    }
-    if (cur->color == RBTREE_RED)
-    {
-      printf("\x1b[31m%d\x1b[0m\n", cur->key);
-    }
-    else{
-      printf("%d\n", cur->key);
-    }
+//     // 현재 노드 출력
+//     for (int i = 0; i < level - 1; i++) {
+//         printf("    ");
+//     }
+//     if (level > 0) {
+//         printf(isLeft ? " \\_ " : " /⎺ ");  // 왼쪽 자식일 경우 "\\" 출력, 오른쪽 자식일 경우 "/" 출력
+//     }
+//     if (cur->color == RBTREE_RED)
+//     {
+//       printf("\x1b[31m%d\x1b[0m\n", cur->key);
+//     }
+//     else{
+//       printf("%d\n", cur->key);
+//     }
 
-    // 왼쪽 자식 노드 출력
-    printTree(t, cur->left, level + 1, 1);
-}
+//     // 왼쪽 자식 노드 출력
+//     printTree(t, cur->left, level + 1, 1);
+// }
